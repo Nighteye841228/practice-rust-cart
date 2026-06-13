@@ -1,5 +1,5 @@
 use axum::{Json, http::StatusCode, response::IntoResponse};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::errors::AppError::{ClientError, ServerError};
 
@@ -10,7 +10,7 @@ pub enum AppError {
 
 pub enum BusinessCode {
     PasswordTooShort,
-    Duplicate,
+    // Duplicate,
     EmptyField,
     WrongPassword,
     NoAuth,
@@ -21,7 +21,7 @@ pub enum BusinessCode {
 impl BusinessCode {
     fn as_str(&self) -> String {
         match self {
-            BusinessCode::Duplicate => String::from("DUPLICATE"),
+            // BusinessCode::Duplicate => String::from("DUPLICATE"),
             BusinessCode::PasswordTooShort => String::from("PASSWORD_TOO_SHORT"),
             BusinessCode::EmptyField => String::from("EMPTY_FIELD"),
             BusinessCode::WrongPassword => String::from("WRONG_PASSWORD"),

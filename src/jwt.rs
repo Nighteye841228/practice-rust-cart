@@ -2,7 +2,7 @@ use std::env;
 
 use axum::{extract::FromRequestParts, http::StatusCode};
 use axum_extra::extract::CookieJar;
-use jsonwebtoken::{DecodingKey, EncodingKey, Validation, decode};
+use jsonwebtoken::{DecodingKey, Validation, decode};
 use serde::{Deserialize, Serialize};
 
 use crate::errors::{AppError, BusinessCode::NoAuth};

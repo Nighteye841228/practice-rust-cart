@@ -2,21 +2,17 @@ use std::env;
 
 use ::cookie::time::{self, Duration};
 use askama::Template;
-use axum::{
-    Json,
-    extract::{Query, State},
-    http::StatusCode,
-};
+use axum::{Json, extract::State, http::StatusCode};
 use axum_extra::extract::{
     CookieJar,
-    cookie::{self, Cookie, SameSite},
+    cookie::{Cookie, SameSite},
 };
 use chrono::Utc;
 use jsonwebtoken::{EncodingKey, Header, encode};
 use password_worker::{BcryptConfig, PasswordWorker};
 use resend_rs::{Resend, types::CreateEmailBaseOptions};
 use sha2::{Digest, Sha256};
-use sqlx::{PgPool, pool};
+use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{
@@ -26,10 +22,8 @@ use crate::{
     },
     jwt::Claims,
     user_repo::{
-        UserDeleteResponse, UserLogin, UserLoginResponse, UserLogout, UserLogoutResponse,
-        UserRefreshToken, UserRefreshTokenResponse, UserRegister, UserRegisterResponse,
-        UserResetPassword, UserResetPasswordEmail, UserResetPasswordEmailResponse,
-        UserResetPasswordResponse,
+        UserDeleteResponse, UserLogin, UserRegister, UserRegisterResponse, UserResetPassword,
+        UserResetPasswordEmail, UserResetPasswordEmailResponse, UserResetPasswordResponse,
     },
 };
 
