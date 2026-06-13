@@ -1,0 +1,28 @@
+[package]
+name = "rust"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.102"
+askama = "0.16.0"
+axum = { version = "0.8.9", features = ["macros"] }
+axum-extra = { version = "0.12.6", features = ["cookie", "cookie-private"] }
+chrono = "0.4.45"
+cookie = "0.18.1"
+dotenvy = "0.15.7"
+hex = "0.4.3"
+jsonwebtoken = { version = "10.4.0", features = ["aws_lc_rs"] }
+password-worker = "0.4.0"
+resend-rs = "0.25.1"
+serde = { version = "1.0.228", features = ["default"] }
+sha2 = "0.11.0"
+sqlx = { version = "0.9.0", features = [
+    "runtime-tokio",
+    "macros",
+    "postgres",
+    "uuid",
+    "chrono",
+] }
+tokio = { version = "1.52.3", features = ["full"] }
+uuid = { version = "1.23.3", features = ["v7"] }
