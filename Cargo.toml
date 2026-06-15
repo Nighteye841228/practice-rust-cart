@@ -5,15 +5,17 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.102"
+argon2 = "0.5.3"
 askama = "0.16.0"
 axum = { version = "0.8.9", features = ["macros"] }
 axum-extra = { version = "0.12.6", features = ["cookie", "cookie-private"] }
 chrono = "0.4.45"
 cookie = "0.18.1"
 dotenvy = "0.15.7"
+getrandom = "0.4.2"
 hex = "0.4.3"
 jsonwebtoken = { version = "10.4.0", features = ["aws_lc_rs"] }
-password-worker = "0.4.0"
+password-worker = { version = "0.4.0", features = ["rust-argon2"] }
 resend-rs = "0.25.1"
 serde = { version = "1.0.228", features = ["default"] }
 sha2 = "0.11.0"

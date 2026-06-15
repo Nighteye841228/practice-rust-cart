@@ -1,7 +1,9 @@
-mod errors;
-mod handlers;
-mod jwt;
-mod user_repo;
+pub mod errors;
+pub mod extractors;
+pub mod handlers;
+pub mod models;
+pub mod repositories;
+pub mod user_repo;
 use std::time::Duration;
 
 use axum::{

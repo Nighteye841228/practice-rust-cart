@@ -1,18 +1,19 @@
-use std::env;
+pub mod products;
 
-use ::cookie::time::{self, Duration};
 use askama::Template;
 use axum::{Json, extract::State, http::StatusCode};
 use axum_extra::extract::{
     CookieJar,
     cookie::{Cookie, SameSite},
 };
-use chrono::Utc;
+use chrono::{Duration, Utc};
+use cookie::time::{self, Duration as CookieDuration};
 use jsonwebtoken::{EncodingKey, Header, encode};
-use password_worker::{BcryptConfig, PasswordWorker};
+use password_worker::{Argon2idConfig, BcryptConfig, PasswordWorker};
 use resend_rs::{Resend, types::CreateEmailBaseOptions};
 use sha2::{Digest, Sha256};
 use sqlx::PgPool;
+use std::env;
 use uuid::Uuid;
 
 use crate::{
@@ -20,7 +21,7 @@ use crate::{
         AppError,
         BusinessCode::{self, NoAuth},
     },
-    jwt::Claims,
+    extractors::jwt::{self, Claims},
     user_repo::{
         UserDeleteResponse, UserLogin, UserRegister, UserRegisterResponse, UserResetPassword,
         UserResetPasswordEmail, UserResetPasswordEmailResponse, UserResetPasswordResponse,
@@ -85,7 +86,12 @@ pub async fn login(
     .fetch_optional(&pool)
     .await?;
 
+    let hasher = PasswordWorker::new_argon2id(4)?;
     let Some(row) = user else {
+        let dummy_hash = "$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi";
+        // 3. 執行完整的驗證，讓它消耗與密碼錯誤時完全相同的 CPU 時間
+        let _ = PasswordWorker::verify(&hasher, &payload.password, dummy_hash).await;
+
         return Err(AppError::ClientError(
             StatusCode::BAD_REQUEST,
             BusinessCode::WrongPassword,
@@ -93,7 +99,6 @@ pub async fn login(
         ));
     };
 
-    let hasher = PasswordWorker::new_bcrypt(4)?;
     if !PasswordWorker::verify(&hasher, &payload.password, &row.password).await? {
         return Err(AppError::ClientError(
             StatusCode::BAD_REQUEST,
@@ -102,7 +107,7 @@ pub async fn login(
         ));
     }
 
-    let expiration = Utc::now() + chrono::Duration::seconds(15);
+    let expiration = Utc::now() + Duration::seconds(15);
     let secret = env::var("JWT_SECRET")?;
     let access_token = encode(
         &Header::default(),
@@ -115,7 +120,7 @@ pub async fn login(
 
     let refresh_token = Uuid::now_v7().to_string();
     let hashed_refresh_token = sha256_hash(refresh_token.as_str()).await?;
-    let expire_time = Utc::now() + chrono::Duration::days(7);
+    let expire_time = Utc::now() + Duration::days(7);
 
     sqlx::query!(
         "INSERT INTO refresh_tokens (token, user_id, expires_at) VALUES ($1, $2, $3) RETURNING id",
@@ -131,14 +136,14 @@ pub async fn login(
         .secure(false)
         .http_only(true)
         .same_site(SameSite::Strict)
-        .max_age(time::Duration::seconds(10));
+        .max_age(CookieDuration::seconds(10));
 
     let refresh_cookie = Cookie::build(("refresh-token", refresh_token))
         .path("/")
         .secure(false)
         .http_only(true)
         .same_site(SameSite::Strict)
-        .max_age(time::Duration::days(10));
+        .max_age(CookieDuration::days(10));
 
     let jar = jar.add(access_cookie).add(refresh_cookie);
 
@@ -177,7 +182,7 @@ pub async fn refresh(State(pool): State<PgPool>, jar: CookieJar) -> Result<Cooki
         ));
     }
 
-    let expiration = Utc::now() + chrono::Duration::minutes(5);
+    let expiration = Utc::now() + Duration::minutes(5);
     let secret = env::var("JWT_SECRET")?;
     let access_token = encode(
         &Header::default(),
@@ -227,14 +232,14 @@ pub async fn logout(
         .secure(false)
         .http_only(true)
         .same_site(SameSite::Strict)
-        .max_age(Duration::milliseconds(0));
+        .max_age(CookieDuration::milliseconds(0));
 
     let refresh_cookie = Cookie::build(("refresh-token", ""))
         .path("/")
         .secure(false)
         .http_only(true)
         .same_site(SameSite::Strict)
-        .max_age(Duration::milliseconds(0));
+        .max_age(CookieDuration::milliseconds(0));
 
     let jar = jar.add(access_cookie).add(refresh_cookie);
 
@@ -256,7 +261,7 @@ pub async fn delete(
         .secure(false)
         .http_only(true)
         .same_site(SameSite::Strict)
-        .max_age(Duration::milliseconds(0));
+        .max_age(CookieDuration::milliseconds(0));
 
     let jar = jar.add(access_cookie);
 
@@ -283,7 +288,7 @@ pub async fn send_reset_password_email(
 
     let reset_token = Uuid::now_v7().to_string();
     let token = sha256_hash(&reset_token).await?;
-    let expire_time = Utc::now() + chrono::Duration::minutes(10);
+    let expire_time = Utc::now() + Duration::minutes(10);
     sqlx::query!(
         "INSERT INTO password_reset_tokens (token, user_id, expires_at) VALUES ($1, $2, $3)",
         &token,
@@ -363,8 +368,18 @@ pub async fn reset_password(
 }
 
 async fn get_hash(input: &str) -> Result<String, AppError> {
-    let hasher = PasswordWorker::new_bcrypt(4)?;
-    Ok(hasher.hash(input, BcryptConfig { cost: 4 }).await?)
+    let hasher = PasswordWorker::new_argon2id(4)?;
+    let mut salt: Vec<u8> = vec![0; 60];
+    getrandom::fill(&mut salt)?;
+    Ok(hasher
+        .hash(
+            input,
+            Argon2idConfig {
+                salt,
+                ..Default::default()
+            },
+        )
+        .await?)
 }
 
 async fn sha256_hash(input: &str) -> Result<String, AppError> {
