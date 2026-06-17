@@ -3,6 +3,5 @@
 test.http
 .vscode
 Cargo.lock
-jpg
-png
+/test
 /temp
