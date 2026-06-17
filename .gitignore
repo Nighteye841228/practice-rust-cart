@@ -3,3 +3,6 @@
 test.http
 .vscode
 Cargo.lock
+jpg
+png
+/temp
