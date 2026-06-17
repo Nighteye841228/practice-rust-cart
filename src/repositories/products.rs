@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, prelude::FromRow, types::Json};
 use uuid::Uuid;
 
-use crate::errors::AppError;
+use crate::errors::{AppError, BusinessCode, OptionExt};
 
 #[derive(sqlx::Type, Debug, Deserialize)]
 #[sqlx(rename_all = "lowercase", type_name = "product_status")]
@@ -44,6 +44,12 @@ pub struct ProductsCreate {
 #[derive(Debug, Deserialize, Serialize, FromRow)]
 pub struct ProductsCreateResponse {
     pub id: Uuid,
+}
+
+#[derive(Debug, Deserialize, Serialize, FromRow)]
+pub struct ProductTempImageResponse {
+    pub url: String,
+    pub alt: String,
 }
 
 pub async fn product_insert(

@@ -13,10 +13,11 @@ use axum::{
     routing::{get, post},
 };
 use sqlx::{PgPool, postgres::PgPoolOptions};
+use tower_http::services::ServeDir;
 
 use crate::handlers::{
     delete, login, logout,
-    products::{create, save_images},
+    products::{create, upload_temp_image},
     refresh, register, reset_password, send_reset_password_email, test,
 };
 
@@ -33,6 +34,7 @@ async fn main() {
         .expect("cannot connect to database");
 
     let app = Router::new()
+        .nest_service("/product_edit_images", ServeDir::new("temp"))
         .route("/", get(using_connection_pool_extractor))
         .route("/register", post(register))
         .route("/login", post(login))
@@ -46,7 +48,7 @@ async fn main() {
         )
         .route("/reset-password", post(reset_password))
         .route("/product/create", post(create))
-        .route("/product/image-upload", post(save_images))
+        .route("/product/image-upload", post(upload_temp_image))
         .with_state(pool);
 
     // run it
