@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+axum = { version = "0.8.9", features = ["macros", "multipart"] }
 anyhow = "1.0.102"
 argon2 = "0.5.3"
 askama = "0.16.0"
-axum = { version = "0.8.9", features = ["macros"] }
 axum-extra = { version = "0.12.6", features = ["cookie", "cookie-private"] }
 chrono = "0.4.45"
 cookie = "0.18.1"
@@ -17,7 +17,8 @@ hex = "0.4.3"
 jsonwebtoken = { version = "10.4.0", features = ["aws_lc_rs"] }
 password-worker = { version = "0.4.0", features = ["rust-argon2"] }
 resend-rs = "0.25.1"
-serde = { version = "1.0.228", features = ["default"] }
+serde = { version = "1.0.228", features = ["default", "derive"] }
+serde_json = { version = "1.0", features = ["raw_value"] }
 sha2 = "0.11.0"
 sqlx = { version = "0.9.0", features = [
     "runtime-tokio",
@@ -27,4 +28,5 @@ sqlx = { version = "0.9.0", features = [
     "chrono",
 ] }
 tokio = { version = "1.52.3", features = ["full"] }
-uuid = { version = "1.23.3", features = ["v7"] }
+uuid = { version = "1.23.3", features = ["v7", "serde"] }
+infer = "0.3"

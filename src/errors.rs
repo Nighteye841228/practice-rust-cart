@@ -72,3 +72,32 @@ where
         AppError::ServerError(err.into())
     }
 }
+
+// 1. 定義一個特徵
+pub trait OptionExt<T> {
+    fn or_bad_request(self, msg: &str) -> Result<T, AppError>;
+    fn or_not_found(self, msg: &str) -> Result<T, AppError>;
+}
+
+// 2. 實作在標準庫的 Option 上
+impl<T> OptionExt<T> for Option<T> {
+    fn or_bad_request(self, msg: &str) -> Result<T, AppError> {
+        self.ok_or_else(|| {
+            AppError::ClientError(
+                StatusCode::BAD_REQUEST,
+                BusinessCode::EmptyField,
+                msg.to_string(),
+            )
+        })
+    }
+
+    fn or_not_found(self, msg: &str) -> Result<T, AppError> {
+        self.ok_or_else(|| {
+            AppError::ClientError(
+                StatusCode::NOT_FOUND,
+                BusinessCode::NotFoundUser,
+                msg.to_string(),
+            )
+        })
+    }
+}

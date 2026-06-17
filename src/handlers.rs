@@ -1,5 +1,6 @@
 pub mod products;
 
+use argon2::password_hash::{SaltString, rand_core::OsRng};
 use askama::Template;
 use axum::{Json, extract::State, http::StatusCode};
 use axum_extra::extract::{
@@ -9,7 +10,7 @@ use axum_extra::extract::{
 use chrono::{Duration, Utc};
 use cookie::time::{self, Duration as CookieDuration};
 use jsonwebtoken::{EncodingKey, Header, encode};
-use password_worker::{Argon2idConfig, BcryptConfig, PasswordWorker};
+use password_worker::{Argon2idConfig, PasswordWorker};
 use resend_rs::{Resend, types::CreateEmailBaseOptions};
 use sha2::{Digest, Sha256};
 use sqlx::PgPool;
@@ -21,7 +22,7 @@ use crate::{
         AppError,
         BusinessCode::{self, NoAuth},
     },
-    extractors::jwt::{self, Claims},
+    extractors::jwt::Claims,
     user_repo::{
         UserDeleteResponse, UserLogin, UserRegister, UserRegisterResponse, UserResetPassword,
         UserResetPasswordEmail, UserResetPasswordEmailResponse, UserResetPasswordResponse,
@@ -369,14 +370,15 @@ pub async fn reset_password(
 
 async fn get_hash(input: &str) -> Result<String, AppError> {
     let hasher = PasswordWorker::new_argon2id(4)?;
-    let mut salt: Vec<u8> = vec![0; 60];
-    getrandom::fill(&mut salt)?;
+    let salt = SaltString::generate(&mut OsRng).to_string().into_bytes();
     Ok(hasher
         .hash(
             input,
             Argon2idConfig {
                 salt,
-                ..Default::default()
+                time_cost: 2,
+                mem_cost: 65536,
+                hash_length: 32,
             },
         )
         .await?)

@@ -15,7 +15,9 @@ use axum::{
 use sqlx::{PgPool, postgres::PgPoolOptions};
 
 use crate::handlers::{
-    delete, login, logout, refresh, register, reset_password, send_reset_password_email, test,
+    delete, login, logout,
+    products::{create, save_images},
+    refresh, register, reset_password, send_reset_password_email, test,
 };
 
 #[tokio::main]
@@ -38,11 +40,13 @@ async fn main() {
         .route("/logout", post(logout))
         .route("/delete", post(delete))
         .route("/test", get(test))
-        .route("/reset-password", post(reset_password))
         .route(
             "/send-reset-password-email",
             post(send_reset_password_email),
         )
+        .route("/reset-password", post(reset_password))
+        .route("/product/create", post(create))
+        .route("/product/image-upload", post(save_images))
         .with_state(pool);
 
     // run it
