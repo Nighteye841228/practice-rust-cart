@@ -69,5 +69,5 @@ async fn save_temp_local(buffer: Bytes, extension: &str) -> Result<String, AppEr
     let image_dest = format!("./temp/{image_id}.{extension}");
     fs::write(&image_dest, buffer).await?;
 
-    Ok(image_id)
+    Ok(format!("{image_id}.{extension}"))
 }

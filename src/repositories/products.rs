@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, prelude::FromRow, types::Json};
+use tokio::fs::{self, create_dir_all};
 use uuid::Uuid;
 
 use crate::errors::{AppError, BusinessCode, OptionExt};
@@ -21,18 +22,18 @@ pub struct Spec {
     saving_method: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Images {
-    description: String,
-    url: String,
-}
+// #[derive(Serialize, Deserialize, Debug)]
+// pub struct Images {
+//     description: String,
+//     url: String,
+// }
 
 #[derive(Debug, Deserialize, FromRow)]
 pub struct ProductsCreate {
     pub name: String,
     pub description: String,
     pub specs: Spec,
-    pub images: Vec<Images>,
+    pub images: Vec<String>,
     pub status: Status,
     pub original_price: i32,
     pub selling_price: i32,
@@ -56,6 +57,8 @@ pub async fn product_insert(
     payload: ProductsCreate,
     pool: &PgPool,
 ) -> Result<ProductsCreateResponse, AppError> {
+    replace_images(&payload.images).await?;
+
     let row = sqlx::query!(
         r#"
         INSERT INTO products
@@ -65,9 +68,9 @@ pub async fn product_insert(
         RETURNING id
         "#,
         payload.name,
-        payload.description,
+        payload.description.replace("/temp/", "/assets/product/"),
         Json(payload.specs) as Json<Spec>,
-        Json(payload.images) as Json<Vec<Images>>,
+        Json(payload.images) as Json<Vec<String>>,
         payload.status as Status,
         payload.original_price,
         payload.selling_price,
@@ -77,4 +80,16 @@ pub async fn product_insert(
     ).fetch_one(pool).await?;
 
     Ok(ProductsCreateResponse { id: row.id })
+}
+
+///[
+///  "129382-129001.jpg", "193821903-1290320.png"
+///]
+async fn replace_images(temp_imgs: &[String]) -> Result<(), AppError> {
+    create_dir_all("./assets/product").await?;
+    for img in temp_imgs {
+        fs::rename(format!("./temp/{img}"), format!("./assets/product/{img}")).await?;
+    }
+
+    Ok(())
 }
