@@ -1,5 +1,6 @@
 use crate::{
     errors::{AppError, BusinessCode, OptionExt},
+    extractors::jwt::AdminClaims,
     models::products::write_image_to_temp_dir,
     repositories::products::{
         ProductTempImageResponse, ProductsCreate, ProductsCreateResponse, product_insert,
@@ -18,6 +19,7 @@ use uuid::Uuid;
 
 pub async fn create(
     State(pool): State<PgPool>,
+    _: AdminClaims,
     Json(payload): Json<ProductsCreate>,
 ) -> Result<Json<ProductsCreateResponse>, AppError> {
     let res = product_insert(payload, &pool).await?;
@@ -26,6 +28,7 @@ pub async fn create(
 }
 
 pub async fn upload_temp_image(
+    _: AdminClaims,
     multipart: Multipart,
 ) -> Result<Json<ProductTempImageResponse>, AppError> {
     let res = write_image_to_temp_dir(multipart).await?;

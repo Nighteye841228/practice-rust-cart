@@ -1,5 +1,6 @@
 pub mod products;
 
+use crate::extractors::jwt::Role;
 use argon2::password_hash::{SaltString, rand_core::OsRng};
 use askama::Template;
 use axum::{Json, extract::State, http::StatusCode};
@@ -48,7 +49,7 @@ pub async fn register(
         ));
     }
 
-    let hash_code = get_hash(&payload.password).await?;
+    let hash_code = argon_hash(&payload.password).await?;
 
     let db_response = sqlx::query!(
         "INSERT INTO users (account, email, password, shipping_address, name, recipient_name, phone) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
@@ -81,7 +82,8 @@ pub async fn login(
     }
 
     let user = sqlx::query!(
-        "SELECT id, password FROM users WHERE email=$1",
+        r#"SELECT id, password, role as "role: Role"
+        FROM users WHERE email=$1"#,
         payload.email,
     )
     .fetch_optional(&pool)
@@ -115,6 +117,7 @@ pub async fn login(
         &Claims {
             sub: row.id.to_string(),
             exp: expiration.timestamp().try_into()?,
+            role: row.role,
         },
         &EncodingKey::from_secret(secret.as_ref()),
     )?;
@@ -161,7 +164,13 @@ pub async fn refresh(State(pool): State<PgPool>, jar: CookieJar) -> Result<Cooki
     };
     let recv_refresh_hash_code = sha256_hash(expired_refresh_token.value()).await?;
     let refresh_row = sqlx::query!(
-        "SELECT user_id, token, expires_at FROM refresh_tokens WHERE token=$1",
+        r#"
+        SELECT r.user_id, r.token, r.expires_at, u.role as "role: Role"
+        FROM refresh_tokens as r
+        INNER JOIN users as u
+        ON r.user_id=u.id
+        WHERE token=$1
+        "#,
         recv_refresh_hash_code
     )
     .fetch_optional(&pool)
@@ -190,6 +199,7 @@ pub async fn refresh(State(pool): State<PgPool>, jar: CookieJar) -> Result<Cooki
         &Claims {
             sub: refresh_row.user_id.to_string(),
             exp: expiration.timestamp().try_into()?,
+            role: refresh_row.role,
         },
         &EncodingKey::from_secret(secret.as_ref()),
     )?;
@@ -343,7 +353,7 @@ pub async fn reset_password(
         ));
     };
 
-    let hash_code = get_hash(&payload.password).await?;
+    let hash_code = argon_hash(&payload.password).await?;
 
     let mut tx = pool.begin().await?;
     sqlx::query!(
@@ -368,7 +378,7 @@ pub async fn reset_password(
     }))
 }
 
-async fn get_hash(input: &str) -> Result<String, AppError> {
+async fn argon_hash(input: &str) -> Result<String, AppError> {
     let hasher = PasswordWorker::new_argon2id(4)?;
     let salt = SaltString::generate(&mut OsRng).to_string().into_bytes();
     Ok(hasher
